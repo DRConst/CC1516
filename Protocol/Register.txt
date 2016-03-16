@@ -1,0 +1,12 @@
+Client connects to server via TCP socket
+Client sends RSA_Probe request
+Client waits on RSA_Response request
+Client proceeds with normal ops via PKE
+
+RSA_Probe{
+string user, pubKey;
+}
+
+RSA_Response{
+string pubKey;
+}
