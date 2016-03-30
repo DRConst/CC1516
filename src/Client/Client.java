@@ -19,7 +19,7 @@ public class Client {
     public static void main(String[] args){
         try{
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
-            Socket c = new Socket("localhost", 123);
+            Socket c = new Socket("localhost", 20123);
             BufferedReader in = new BufferedReader (new InputStreamReader(c.getInputStream()));
             PrintWriter out = new PrintWriter (c.getOutputStream(),true);
             System.out.println("Conexão efetuada!\n"

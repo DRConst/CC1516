@@ -1,15 +1,18 @@
+package Server;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Server;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -22,12 +25,14 @@ public class Interface implements Runnable{
     private BufferedReader in;
     private PrintWriter out;
     private Users utilizadores;
+    private Login login;
     
-    public Interface(Socket client, Users utilizadores) throws IOException{
+    public Interface(Socket client, Users utilizadores, Login login) throws IOException{
         this.client=client;
         this.in= new BufferedReader(new InputStreamReader(client.getInputStream()));
         this.out= new PrintWriter(client.getOutputStream(),true);
         this.utilizadores=utilizadores;
+        this.login = login;
     }
     
     public int handle() throws IOException, InterruptedException{
@@ -41,7 +46,15 @@ public class Interface implements Runnable{
                              pass=in.readLine();
                              
                              out.println("Utilizador registado! Selecione nova opção.");
-                                this.utilizadores.addUser(new User(user,pass,(utilizadores.lastKey()+1)));
+                            {
+                                try {
+                                    this.login.registerUser(user,pass);
+                                } catch (NoSuchAlgorithmException ex) {
+                                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                                } catch (UserRegisteredException ex) {
+                                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                                }
+                            }
                              break;
             /*
             case "Login":  String u, p, orig, dest;

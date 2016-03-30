@@ -33,7 +33,7 @@ public class Login implements Serializable
         salts = l.getSalts();
     }
 
-    public synchronized  void  registerUser(String userName, String password, String plate, String make) throws IOException, NoSuchAlgorithmException, UserRegisteredException {
+    public synchronized  void  registerUser(String userName, String password) throws IOException, NoSuchAlgorithmException, UserRegisteredException {
         byte[] salt = genSalt();
         byte[] hash = genHash(salt, password);
         if(users.containsKey(userName))
@@ -48,6 +48,10 @@ public class Login implements Serializable
             userStorage.addUser(u);
 
         }
+    }
+    
+    public void setUserStorage(Users u){
+        userStorage = u;
     }
 
     public boolean checkRegistration(String userName, String password) throws IOException, NoSuchAlgorithmException {

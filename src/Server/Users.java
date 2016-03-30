@@ -40,6 +40,8 @@ public class Users {
     }
     
     public Integer lastKey() {
+        if (utilizadores.isEmpty())
+            return 0;
         return utilizadores.lastKey();
     }
     
