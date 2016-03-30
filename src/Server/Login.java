@@ -1,11 +1,9 @@
 package Server;
 
 import java.util.Map;
-
-package Server; /**
+ /**
  * Created by drcon on 21/12/2015.
  */
-        import Commons.User;
 
         import java.io.ByteArrayOutputStream;
         import java.io.IOException;
@@ -21,6 +19,7 @@ public class Login implements Serializable
 {
     private HashMap<String, byte[]> hashes, salts;
     private HashMap<String, User> users;
+    private Users userStorage;
     public Login()
     {
         hashes = new HashMap<>();
@@ -44,7 +43,9 @@ public class Login implements Serializable
         {
             registerSalt(userName, salt);
             registerPw(userName, hash);
-            users.put(userName, new User(userName, password, plate, make));
+            User u = new User(userName, password, userStorage.lastKey());
+            users.put(userName, u);
+            userStorage.addUser(u);
 
         }
     }
