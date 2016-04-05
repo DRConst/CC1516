@@ -5,10 +5,14 @@
  */
 package Server;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import static java.lang.Thread.sleep;
+
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,7 +38,7 @@ public class Server implements Runnable {
     private void saveState() {
             while(true){
                     try {
-                        sleep(1);
+                        sleep(1000);
                         serializer.writeObject(login);
                         System.out.println("State saved");
                     } catch (InterruptedException ex) {
@@ -45,6 +49,30 @@ public class Server implements Runnable {
                         System.out.println("State dsa");
                     }
                 }
+    }
+
+    private void debugUI()
+    {
+        BufferedReader in = new BufferedReader (new InputStreamReader(System.in));
+        while(true)
+        {
+            System.out.println("Command:");
+            try {
+                String response = in.readLine();
+
+                if(response.equals("users"))
+                {
+                    HashMap<String,Boolean> log = login.getLoggedIn();
+                    if(log != null)
+                        System.out.println(log.toString());
+                    else
+                        System.out.println("No users logged in");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
     
     @Override
@@ -64,6 +92,13 @@ public class Server implements Runnable {
                 }
             });
             loginsaver.start();
+
+            Thread ui = new Thread(new Runnable(){
+                public void run(){
+                    debugUI();
+                }
+            });
+            ui.start();
             
             while (true) {
                 client = s.accept ();

@@ -21,17 +21,22 @@ public class Login implements Serializable
     private HashMap<String, User> users;
     private HashMap<String, Boolean> loggedIn;
     private Users userStorage;
+
+
     public Login()
     {
         hashes = new HashMap<>();
         salts = new HashMap<>();
         users = new HashMap<>();
+        loggedIn = new HashMap<>();
     }
 
     public Login(Login l)
     {
         hashes = l.getHashes();
         salts = l.getSalts();
+        users = l.getUsers();
+        loggedIn = l.getLoggedIn();
     }
 
     public synchronized  void  registerUser(String userName, String password) throws IOException, NoSuchAlgorithmException, UserRegisteredException {
@@ -174,12 +179,28 @@ public class Login implements Serializable
         }
     }
 
+    public HashMap<String, Boolean> getLoggedIn() {
+        return loggedIn;
+    }
+
+    public void setLoggedIn(HashMap<String, Boolean> loggedIn) {
+        this.loggedIn = loggedIn;
+    }
+
     public HashMap<String, byte[]> getHashes() {
         return hashes;
     }
 
     public HashMap<String, byte[]> getSalts() {
         return salts;
+    }
+
+    public HashMap<String, User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(HashMap<String, User> users) {
+        this.users = users;
     }
 
     public String toString()

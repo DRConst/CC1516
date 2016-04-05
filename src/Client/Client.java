@@ -24,7 +24,8 @@ public class Client {
             PrintWriter out = new PrintWriter (c.getOutputStream(),true);
             System.out.println("Conexão efetuada!\n"
                 + "Menu\n"
-                + "Registar" + "...\n");
+                + "Registar" + "...\n"
+                + "Login" + "...\n");
             String s,resp;
             resp = "";
             while(!resp.equals("Saiu do sistema")){
