@@ -34,13 +34,15 @@ public class Server implements Runnable {
     private void saveState() {
             while(true){
                     try {
-                        sleep(10000);
+                        sleep(1);
                         serializer.writeObject(login);
                         System.out.println("State saved");
                     } catch (InterruptedException ex) {
                         Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("State asd");
                     } catch (IOException ex) {
                         Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("State dsa");
                     }
                 }
     }

@@ -19,6 +19,7 @@ public class Login implements Serializable
 {
     private HashMap<String, byte[]> hashes, salts;
     private HashMap<String, User> users;
+    private HashMap<String, Boolean> loggedIn;
     private Users userStorage;
     public Login()
     {
@@ -46,6 +47,7 @@ public class Login implements Serializable
             User u = new User(userName, password, userStorage.lastKey());
             users.put(userName, u);
             userStorage.addUser(u);
+            loggedIn.put(userName,false);
 
         }
     }
@@ -84,10 +86,11 @@ public class Login implements Serializable
         }
     }
 
-    public User authenticateUser(String userName, String password) throws IOException, NoSuchAlgorithmException, UserNotFoundException, LoginFailedException {
+    public synchronized User authenticateUser(String userName, String password) throws IOException, NoSuchAlgorithmException, UserNotFoundException, LoginFailedException {
         User usr;
         if(checkRegistration(userName, password)) {
             usr =  users.get(userName);
+            loggedIn.replace(userName, true);
             return usr;
 
         }else
@@ -97,6 +100,12 @@ public class Login implements Serializable
             else
                 throw new LoginFailedException("Server.Login Failed.");
         }
+    }
+
+    public synchronized void setLoggedIn(String userName, Boolean status)
+    {
+        if(users.containsKey(userName))
+            loggedIn.replace(userName, status);
     }
 
     public User getRegisteredUser(String userName)

@@ -5,11 +5,13 @@
  */
 package Server;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Diogo
  */
-public class User {
+public class User implements Serializable{
     private String username;
     private String pass;
     private Integer id;

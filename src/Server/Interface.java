@@ -26,6 +26,7 @@ public class Interface implements Runnable{
     private PrintWriter out;
     private Users utilizadores;
     private Login login;
+    private User activeUser = null;
     
     public Interface(Socket client, Users utilizadores, Login login) throws IOException{
         this.client=client;
@@ -37,43 +38,44 @@ public class Interface implements Runnable{
     
     public int handle() throws IOException, InterruptedException{
         int flag=1;
-        User us=null;
-        switch(in.readLine()){
-            case "Registar": String user, pass;
-                             out.println("Introduza o seu username");
-                             user=in.readLine();
-                             out.println("Introduza a sua password");
-                             pass=in.readLine();
-                             
-                             out.println("Utilizador registado! Selecione nova opção.");
-                            {
-                                try {
-                                    this.login.registerUser(user,pass);
-                                } catch (NoSuchAlgorithmException ex) {
-                                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
-                                } catch (UserRegisteredException ex) {
-                                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
-                                }
-                            }
-                             break;
-            /*
-            case "Login":  String u, p, orig, dest;
-                           out.println("Introduza o seu username");
-                           u=in.readLine();
-                           out.println("Introduza a sua password");
-                           p=in.readLine();
-                           if(this.utilizadores.getUtilizadores().containsKey(u)){
-                             if(this.utilizadores.login(u, p)){
-                               us =this.utilizadores.getUser(u);
-                               out.println("Login efetuado! Bem-vindo " + us.getNome() + 
-                                    
-                             }
-                           }
-                           break;
-            */
+        switch(in.readLine()) {
+            case "Registar":
+                String user, pass;
+                out.println("Introduza o seu username");
+                user = in.readLine();
+                out.println("Introduza a sua password");
+                pass = in.readLine();
+
+                out.println("Utilizador registado! Selecione nova opção.");
+                try {
+                    this.login.registerUser(user, pass);
+                } catch (NoSuchAlgorithmException ex) {
+                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (UserRegisteredException ex) {
+                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                break;
+
+        case "Login":  String u, p;
+                out.println("Introduza o seu username");
+                u=in.readLine();
+                out.println("Introduza a sua password");
+                p=in.readLine();
+            try {
+                activeUser = login.authenticateUser(u,p);
+                out.println("Login correcto");
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (UserNotFoundException e) {
+                e.printStackTrace();
+            } catch (LoginFailedException e) {
+                out.println("Login errado");
+                break;
+            }
+            break;
             case "Sair": flag=0;
-                         if(us!=null)
-                                 this.utilizadores.logout(us.getUsername());             
+                         if(activeUser!=null)
+                                 this.login.setLoggedIn(activeUser.getUsername(),false);
                          out.println("Saiu do sistema");
                          break;
                          

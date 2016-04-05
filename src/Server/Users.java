@@ -5,6 +5,7 @@
  */
 package Server;
 
+import java.io.Serializable;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -14,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Diogo
  */
-public class Users {
+public class Users implements Serializable{
     private TreeMap < Integer, User> utilizadores;
     private Lock l = new ReentrantLock (); 
     
@@ -43,19 +44,5 @@ public class Users {
         if (utilizadores.isEmpty())
             return 0;
         return utilizadores.lastKey();
-    }
-    
-    public synchronized boolean login(String username, String password){
-        if(this.utilizadores.containsKey(username)){
-               if(this.utilizadores.get(username).getPass().equals(password)){
-                   this.utilizadores.get(username).setLogged(true);
-                   return true;
-               }
-        }
-        return false;
-    }
-    
-    public void logout(String s){
-        this.utilizadores.get(s).setLogged(false);
     }
 }

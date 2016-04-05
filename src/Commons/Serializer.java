@@ -33,6 +33,7 @@ public class Serializer {
             toRet = ois.readObject();
         }catch (IOException e)
         {
+            locks.get(name).unlock();
             return null;
         }
         locks.get(name).unlock();
@@ -55,6 +56,10 @@ public class Serializer {
         locks.get(name).lock();
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(name + ".saved"))) {
             oos.writeObject(o);
+        }catch (Exception e)
+        {
+            locks.get(name).unlock();
+            throw new IOException();
         }
         locks.get(name).unlock();
     }
