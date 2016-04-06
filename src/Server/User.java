@@ -6,6 +6,8 @@
 package Server;
 
 import java.io.Serializable;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 
 /**
  *
@@ -15,6 +17,8 @@ public class User implements Serializable{
     private String username;
     private String pass;
     private Integer id;
+    private Integer port;
+    private InetAddress ip;
     public boolean logged;
     
     public User(String username, String pass, Integer id) {
@@ -22,6 +26,29 @@ public class User implements Serializable{
         this.pass = pass;
         this.id = id;
     }
+    public User(String username, String pass, Integer id, Integer port) {
+        this.username = username;
+        this.pass = pass;
+        this.id = id;
+        this.port = port;
+    }
+
+    public InetAddress getIp() {
+        return ip;
+    }
+
+    public void setIp(InetAddress ip) {
+        this.ip = ip;
+    }
+
+    public Integer getPort() {
+        return port;
+    }
+
+    public void setPort(Integer port) {
+        this.port = port;
+    }
+
     public int getId() {
         return id;
     }

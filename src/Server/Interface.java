@@ -49,10 +49,17 @@ public class Interface implements Runnable{
                 out.println("Utilizador registado! Selecione nova opção.");
                 try {
                     this.login.registerUser(user, pass);
+                    User reg = login.authenticateUser(user, pass);
+                    reg.setPort(client.getPort());
+                    reg.setIp(client.getInetAddress());
                 } catch (NoSuchAlgorithmException ex) {
                     Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (UserRegisteredException ex) {
                     Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (UserNotFoundException e) {
+                    e.printStackTrace();
+                } catch (LoginFailedException e) {
+                    e.printStackTrace();
                 }
                 break;
 
