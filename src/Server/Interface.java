@@ -7,6 +7,12 @@ package Server;
  */
 
 
+import Commons.LoginData;
+import Commons.PacketTypes;
+import Commons.RegisterData;
+import Commons.Serializer;
+import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,7 +44,46 @@ public class Interface implements Runnable{
     
     public int handle() throws IOException, InterruptedException{
         int flag=1;
-        switch(in.readLine()) {
+
+        Packet p = (Packet) Serializer.unserializeFromString(in.readLine());
+
+        if(p.getType() == PacketTypes.registerPacket)
+        {
+            RegisterData reg = (RegisterData) Serializer.unserializeFromString(p.data);
+            try {
+                this.login.registerUser(reg.getUserName(), reg.getPassword());
+
+                User usr = login.authenticateUser(reg.getUserName(), reg.getPassword());
+                usr.setPort(reg.getPort());
+                usr.setIp(reg.getIP());
+                out.println("Success");
+
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (UserRegisteredException e) {
+                e.printStackTrace();
+            } catch (LoginFailedException e) {
+                e.printStackTrace();
+            } catch (UserNotFoundException e) {
+                e.printStackTrace();
+            }
+
+        }else if(p.getType() == PacketTypes.loginPacket)
+        {
+            LoginData reg = (LoginData) Serializer.unserializeFromString(p.data);
+            try {
+                User u = this.login.authenticateUser(reg.getUsername(), reg.getPassword());
+                u.setLogged(true);
+                out.println("Success");
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (LoginFailedException e) {
+                e.printStackTrace();
+            } catch (UserNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        /*switch(in.readLine()) {
             case "Registar":
                 String user, pass;
                 out.println("Introduza o seu username");
@@ -87,7 +132,7 @@ public class Interface implements Runnable{
                          break;
                          
             default: out.println("Comando errado");
-        }
+        }*/
         return flag;
     }
     

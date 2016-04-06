@@ -5,6 +5,14 @@
  */
 package Client;
 
+import Commons.LoginData;
+import Commons.PacketTypes;
+import Commons.RegisterData;
+import Commons.Serializer;
+import Server.Packet;
+import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
+import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,6 +26,7 @@ import java.net.Socket;
 public class Client {
     public static void main(String[] args){
         try{
+            Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
             Socket c = new Socket("localhost", 20123);
             BufferedReader in = new BufferedReader (new InputStreamReader(c.getInputStream()));
@@ -30,7 +39,19 @@ public class Client {
             resp = "";
             while(!resp.equals("Saiu do sistema")){
                 s = keyboard.readLine();
-                out.println(s);
+                System.out.println("Username e Password");
+                String user = keyboard.readLine();
+                String pass = keyboard.readLine();
+                if(s.equals("Registar"))
+                {
+                    packet.setData(Serializer.convertToString(new RegisterData(c.getInetAddress(), c.getPort(),user, pass )));
+                }
+                if(s.equals("Login"))
+                {
+                    packet.setType(PacketTypes.loginPacket);
+                    packet.setData(Serializer.convertToString(new LoginData(user, pass )));
+                }
+                out.println(Serializer.serializeToString(packet));
                 resp = in.readLine();
                 System.out.println(resp);
             }

@@ -41,6 +41,23 @@ public class Serializer {
         return toRet;
     }
 
+    public static String convertToString(Object o) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream( baos );
+        oos.writeObject( o );
+        oos.close();
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    public Object decodeFromString(String s) throws IOException, ClassNotFoundException {
+        byte [] data = Base64.getDecoder().decode( s );
+        ObjectInputStream ois = new ObjectInputStream(
+                new ByteArrayInputStream(  data ) );
+        Object o  = ois.readObject();
+        ois.close();
+        return o;
+    }
+
     public void writeObject(Object o) throws IOException { //Multithreading might pose problems with concurrent writes so lock the file
 
 
