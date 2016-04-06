@@ -11,7 +11,6 @@ import Commons.LoginData;
 import Commons.PacketTypes;
 import Commons.RegisterData;
 import Commons.Serializer;
-import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,7 +26,8 @@ import java.util.logging.Logger;
  * @author Diogo
  */
 public class Interface implements Runnable{
-    private Socket client;
+    private Socket clientMain;
+    private Socket clientPush;
     private BufferedReader in;
     private PrintWriter out;
     private Users utilizadores;
@@ -35,7 +35,7 @@ public class Interface implements Runnable{
     private User activeUser = null;
     
     public Interface(Socket client, Users utilizadores, Login login) throws IOException{
-        this.client=client;
+        this.clientMain =client;
         this.in= new BufferedReader(new InputStreamReader(client.getInputStream()));
         this.out= new PrintWriter(client.getOutputStream(),true);
         this.utilizadores=utilizadores;
@@ -95,8 +95,8 @@ public class Interface implements Runnable{
                 try {
                     this.login.registerUser(user, pass);
                     User reg = login.authenticateUser(user, pass);
-                    reg.setPort(client.getPort());
-                    reg.setIp(client.getInetAddress());
+                    reg.setPort(clientMain.getPort());
+                    reg.setIp(clientMain.getInetAddress());
                 } catch (NoSuchAlgorithmException ex) {
                     Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (UserRegisteredException ex) {
@@ -141,6 +141,8 @@ public class Interface implements Runnable{
     public void run() {
         try {  
             try {
+                String port = in.readLine();
+                clientPush = new Socket(clientMain.getInetAddress(), new Integer(port));
                 while(handle()!=0);
             } catch (InterruptedException ex) {
                 Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);

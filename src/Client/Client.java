@@ -17,6 +17,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
@@ -24,17 +26,44 @@ import java.net.Socket;
  * @author Diogo
  */
 public class Client {
-    public static void main(String[] args){
+    ServerSocket inbound;
+    Socket outbound;
+
+    public Client(ServerSocket inbound, Socket outbound) {
+        this.inbound = inbound;
+        this.outbound = outbound;
+    }
+
+    public Client() throws IOException {
+        inbound = new ServerSocket();
+        inbound.bind(new InetSocketAddress(0));
+        outbound = new Socket("localhost", 20123);
+        Thread inboundT = new Thread(() -> {
+            try {
+                inboundLoop();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        inboundT.start();
+        mainLoop();
+    }
+
+    public void inboundLoop() throws IOException {
+        Socket server = inbound.accept();
+    }
+    public void mainLoop()
+    {
         try{
             Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
-            Socket c = new Socket("localhost", 20123);
-            BufferedReader in = new BufferedReader (new InputStreamReader(c.getInputStream()));
-            PrintWriter out = new PrintWriter (c.getOutputStream(),true);
+            BufferedReader in = new BufferedReader (new InputStreamReader(outbound.getInputStream()));
+            PrintWriter out = new PrintWriter (outbound.getOutputStream(),true);
+            out.println(inbound.getLocalPort());
             System.out.println("Conexão efetuada!\n"
-                + "Menu\n"
-                + "Registar" + "...\n"
-                + "Login" + "...\n");
+                    + "Menu\n"
+                    + "Registar" + "...\n"
+                    + "Login" + "...\n");
             String s,resp;
             resp = "";
             while(!resp.equals("Saiu do sistema")){
@@ -44,7 +73,7 @@ public class Client {
                 String pass = keyboard.readLine();
                 if(s.equals("Registar"))
                 {
-                    packet.setData(Serializer.convertToString(new RegisterData(c.getInetAddress(), c.getPort(),user, pass )));
+                    packet.setData(Serializer.convertToString(new RegisterData(outbound.getInetAddress(), outbound.getPort(),user, pass )));
                 }
                 if(s.equals("Login"))
                 {
@@ -58,5 +87,8 @@ public class Client {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+    public static void main(String[] args) throws IOException {
+        new Client();
     }
 }
