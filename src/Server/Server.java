@@ -103,7 +103,7 @@ public class Server implements Runnable {
             while (true) {
                 client = s.accept ();
                 System.out.println("Cliente ligado.");
-                Thread t = new Thread(new Interface(client,utilizadores,login));
+                Thread t = new Thread(new ClientHandler(client,utilizadores,login));
                 t.start();
             }
         } catch (IOException |ClassNotFoundException ex) {

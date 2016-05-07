@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  *
  * @author Diogo
  */
-public class Interface implements Runnable{
+public class ClientHandler implements Runnable{
     private Socket clientMain;
     private Socket clientPush;
     private BufferedReader in;
@@ -34,8 +34,8 @@ public class Interface implements Runnable{
     private Login login;
     private User activeUser = null;
     
-    public Interface(Socket client, Users utilizadores, Login login) throws IOException{
-        this.clientMain =client;
+    public ClientHandler(Socket client, Users utilizadores, Login login) throws IOException{
+        this.clientMain = client;
         this.in= new BufferedReader(new InputStreamReader(client.getInputStream()));
         this.out= new PrintWriter(client.getOutputStream(),true);
         this.utilizadores=utilizadores;
@@ -83,56 +83,6 @@ public class Interface implements Runnable{
                 e.printStackTrace();
             }
         }
-        /*switch(in.readLine()) {
-            case "Registar":
-                String user, pass;
-                out.println("Introduza o seu username");
-                user = in.readLine();
-                out.println("Introduza a sua password");
-                pass = in.readLine();
-
-                out.println("Utilizador registado! Selecione nova opção.");
-                try {
-                    this.login.registerUser(user, pass);
-                    User reg = login.authenticateUser(user, pass);
-                    reg.setPort(clientMain.getPort());
-                    reg.setIp(clientMain.getInetAddress());
-                } catch (NoSuchAlgorithmException ex) {
-                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (UserRegisteredException ex) {
-                    Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (UserNotFoundException e) {
-                    e.printStackTrace();
-                } catch (LoginFailedException e) {
-                    e.printStackTrace();
-                }
-                break;
-
-        case "Login":  String u, p;
-                out.println("Introduza o seu username");
-                u=in.readLine();
-                out.println("Introduza a sua password");
-                p=in.readLine();
-            try {
-                activeUser = login.authenticateUser(u,p);
-                out.println("Login correcto");
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (UserNotFoundException e) {
-                e.printStackTrace();
-            } catch (LoginFailedException e) {
-                out.println("Login errado");
-                break;
-            }
-            break;
-            case "Sair": flag=0;
-                         if(activeUser!=null)
-                                 this.login.setLoggedIn(activeUser.getUsername(),false);
-                         out.println("Saiu do sistema");
-                         break;
-                         
-            default: out.println("Comando errado");
-        }*/
         return flag;
     }
     
@@ -145,7 +95,7 @@ public class Interface implements Runnable{
                 clientPush = new Socket(clientMain.getInetAddress(), new Integer(port));
                 while(handle()!=0);
             } catch (InterruptedException ex) {
-                Logger.getLogger(Interface.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
             }
             this.in.close();
             this.out.close();

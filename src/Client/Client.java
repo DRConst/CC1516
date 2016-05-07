@@ -10,8 +10,6 @@ import Commons.PacketTypes;
 import Commons.RegisterData;
 import Commons.Serializer;
 import Server.Packet;
-import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
-import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,6 +27,10 @@ public class Client {
     ServerSocket inbound;
     Socket outbound;
 
+    BufferedReader keyboard;
+    BufferedReader inboundInput, outboundInput;
+    PrintWriter outboundOutput, inboundOutput;
+
     public Client(ServerSocket inbound, Socket outbound) {
         this.inbound = inbound;
         this.outbound = outbound;
@@ -38,6 +40,15 @@ public class Client {
         inbound = new ServerSocket();
         inbound.bind(new InetSocketAddress(0));
         outbound = new Socket("localhost", 20123);
+
+        //Set up comms
+
+        keyboard = new BufferedReader(new InputStreamReader(System.in));
+        inboundInput = new BufferedReader (new InputStreamReader(outbound.getInputStream()));
+        outboundOutput = new PrintWriter (outbound.getOutputStream(),true);
+
+
+
         Thread inboundT = new Thread(() -> {
             try {
                 inboundLoop();
@@ -45,6 +56,7 @@ public class Client {
                 e.printStackTrace();
             }
         });
+
         inboundT.start();
         mainLoop();
     }
@@ -56,10 +68,7 @@ public class Client {
     {
         try{
             Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
-            BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
-            BufferedReader in = new BufferedReader (new InputStreamReader(outbound.getInputStream()));
-            PrintWriter out = new PrintWriter (outbound.getOutputStream(),true);
-            out.println(inbound.getLocalPort());
+            outboundOutput.println(inbound.getLocalPort());
             System.out.println("Conexão efetuada!\n"
                     + "Menu\n"
                     + "Registar" + "...\n"
@@ -80,8 +89,8 @@ public class Client {
                     packet.setType(PacketTypes.loginPacket);
                     packet.setData(Serializer.convertToString(new LoginData(user, pass )));
                 }
-                out.println(Serializer.serializeToString(packet));
-                resp = in.readLine();
+                outboundOutput.println(Serializer.serializeToString(packet));
+                resp = inboundInput.readLine();
                 System.out.println(resp);
             }
         } catch (IOException e) {
