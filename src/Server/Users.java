@@ -5,9 +5,10 @@
  */
 package Server;
 
+import Commons.User;
+
 import java.io.Serializable;
 import java.util.TreeMap;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 

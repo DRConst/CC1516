@@ -1,5 +1,7 @@
 package Server;
 
+import Commons.User;
+
 import java.util.Map;
  /**
  * Created by drcon on 21/12/2015.
@@ -13,7 +15,6 @@ import java.util.Map;
         import java.security.SecureRandom;
         import java.util.Arrays;
         import java.util.HashMap;
-        import java.util.Map;
 
 public class Login implements Serializable
 {
@@ -44,7 +45,7 @@ public class Login implements Serializable
         byte[] hash = genHash(salt, password);
         if(users.containsKey(userName))
         {
-            throw new UserRegisteredException("Server.User " + userName + " already registered.");
+            throw new UserRegisteredException("Commons.User " + userName + " already registered.");
         }else
         {
             registerSalt(userName, salt);
@@ -87,7 +88,7 @@ public class Login implements Serializable
             hashes.remove(email);
         }else
         {
-            throw new UserNotFoundException("Server.User " + email + " not found.");
+            throw new UserNotFoundException("Commons.User " + email + " not found.");
         }
     }
 
@@ -101,7 +102,7 @@ public class Login implements Serializable
         }else
         {
             if(!users.containsKey(userName))
-                throw new UserNotFoundException("Server.User " + userName + " not found.");
+                throw new UserNotFoundException("Commons.User " + userName + " not found.");
             else
                 throw new LoginFailedException("Server.Login Failed.");
         }

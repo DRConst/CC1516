@@ -5,16 +5,10 @@
  */
 package Client;
 
-import Commons.LoginData;
-import Commons.PacketTypes;
-import Commons.RegisterData;
-import Commons.Serializer;
+import Commons.*;
 import Server.Packet;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -24,28 +18,33 @@ import java.net.Socket;
  * @author Diogo
  */
 public class Client {
-    ServerSocket inbound;
-    Socket outbound;
+    ServerSocket pushServerSocket;
+    Socket outbound, hbSocket;
 
     BufferedReader keyboard;
-    BufferedReader inboundInput, outboundInput;
-    PrintWriter outboundOutput, inboundOutput;
+    BufferedReader input, pushInput, hbIn;
+    PrintWriter output, pushOutput, hbOut;
 
-    public Client(ServerSocket inbound, Socket outbound) {
-        this.inbound = inbound;
+    String host;
+
+    String uName, pass;
+
+    public Client(ServerSocket pushServerSocket, Socket outbound) {
+        this.pushServerSocket = pushServerSocket;
         this.outbound = outbound;
     }
 
     public Client() throws IOException {
-        inbound = new ServerSocket();
-        inbound.bind(new InetSocketAddress(0));
-        outbound = new Socket("localhost", 20123);
+        pushServerSocket = new ServerSocket();
+        pushServerSocket.bind(new InetSocketAddress(0));
+        host = "localhost";
+        outbound = new Socket(host, 20123);
 
         //Set up comms
 
         keyboard = new BufferedReader(new InputStreamReader(System.in));
-        inboundInput = new BufferedReader (new InputStreamReader(outbound.getInputStream()));
-        outboundOutput = new PrintWriter (outbound.getOutputStream(),true);
+        input = new BufferedReader (new InputStreamReader(outbound.getInputStream()));
+        output = new PrintWriter (outbound.getOutputStream(),true);
 
 
 
@@ -58,17 +57,29 @@ public class Client {
         });
 
         inboundT.start();
+
+        Thread hbThread = new Thread(() -> {
+            try {
+                initHeartbeat();
+                heartbeat();
+            } catch (ServerUnreachableException e) {
+                e.printStackTrace();
+            }
+        });
+
+        hbThread.start();
         mainLoop();
     }
 
     public void inboundLoop() throws IOException {
-        Socket server = inbound.accept();
+        Socket server = pushServerSocket.accept();
     }
     public void mainLoop()
     {
         try{
+
             Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
-            outboundOutput.println(inbound.getLocalPort());
+            output.println(pushServerSocket.getLocalPort());
             System.out.println("Conexão efetuada!\n"
                     + "Menu\n"
                     + "Registar" + "...\n"
@@ -76,25 +87,89 @@ public class Client {
             String s,resp;
             resp = "";
             while(!resp.equals("Saiu do sistema")){
+                boolean rec = false;
                 s = keyboard.readLine();
-                System.out.println("Username e Password");
-                String user = keyboard.readLine();
-                String pass = keyboard.readLine();
-                if(s.equals("Registar"))
+                if(s.equalsIgnoreCase("Registar"))
                 {
+
+                    System.out.println("Username e Password");
+                    String user = keyboard.readLine();
+                    String pass = keyboard.readLine();
                     packet.setData(Serializer.convertToString(new RegisterData(outbound.getInetAddress(), outbound.getPort(),user, pass )));
+                    rec = true;
+
                 }
-                if(s.equals("Login"))
+                if(s.equalsIgnoreCase("Login"))
+                {
+
+                    System.out.println("Username e Password");
+                    uName = keyboard.readLine();
+                    pass = keyboard.readLine();
+
+                    //Send Login Packet
+                    packet.setType(PacketTypes.loginPacket);
+                    packet.setData(Serializer.convertToString(new LoginData(uName, pass, outbound.getInetAddress(), outbound.getPort(), false )));
+                    rec = true;
+                }
+
+                if(s.equalsIgnoreCase("Logout"))
                 {
                     packet.setType(PacketTypes.loginPacket);
-                    packet.setData(Serializer.convertToString(new LoginData(user, pass )));
+                    packet.setData(Serializer.convertToString(new LoginData(uName, pass , true)));
+                    rec = true;
                 }
-                outboundOutput.println(Serializer.serializeToString(packet));
-                resp = inboundInput.readLine();
-                System.out.println(resp);
+                if(rec)
+                {
+                    output.println(Serializer.serializeToString(packet));
+                    resp = input.readLine();
+                    System.out.println(resp);
+                }
+
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+
+    private void heartbeat() throws ServerUnreachableException {
+        String response;
+        boolean timeout = false;
+        while(!timeout)
+        {
+
+            try
+            {
+                response = hbIn.readLine();
+                if(!response.equals("heart"))
+                {
+                    System.out.println("Server HB Corrupted : " + response);
+                    throw new ServerUnreachableException();
+                }else{
+                    hbOut.println("beat");
+                    hbOut.flush();
+                    System.out.println("Server HB successful");
+                }
+            } catch (IOException e) {
+                throw new ServerUnreachableException();
+            }
+        }
+    }
+
+    private void initHeartbeat()
+    {
+        int port = -1;
+        try {
+            String portnum = input.readLine();
+            System.out.println("Got port num : " + portnum);
+            port = new Integer(portnum);
+            hbSocket = new Socket(host, port);
+            hbOut = new PrintWriter(new OutputStreamWriter(hbSocket.getOutputStream()));
+            hbIn = new BufferedReader(new InputStreamReader(hbSocket.getInputStream()));
+            hbSocket.setSoTimeout(10000);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     public static void main(String[] args) throws IOException {
