@@ -10,9 +10,8 @@ import Server.Packet;
 import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -64,14 +63,20 @@ public class Client {
         hbThread.start();
 
         Thread pushThread = new Thread(() -> {
-
+        boolean first = true;
                 while(true) {
                     try {
                         Socket pushSocket = pushServerSocket.accept();
-                        pushSocket.setSoTimeout(1000);
+                        if(first)
+                            pushSocket.setSoTimeout(1000);
+                        else
+                            pushSocket.setSoTimeout(0);
+                        first = false;
                         pushLoop(pushSocket);
-                    } catch (Exception e) {
-                        //e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
 
@@ -119,6 +124,8 @@ public class Client {
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
         Packet r = (Packet)Serializer.unserializeFromString(resp);
+
+
         if(r.getType() != PacketTypes.conResPacket)
         {
             throw new UnexpectedPacketException("Expecting a ConResPacket, got a type " + r.getType());
@@ -127,9 +134,50 @@ public class Client {
             ConResData resData = (ConResData) Serializer.unserializeFromString(r.getData());
             Iterator ipIterator = resData.getIP().iterator();
             Iterator portIterator = resData.getPorts().iterator();
+            int fastestPort = 0;
+            InetAddress fastestHost = null;
+            long shortestPing = 0;
+
+            BufferedReader reader;
+            PrintWriter writer;
             for(i = 0; i < resData.getIP().size(); i++)
             {
-                System.out.println("Found file in host " + ipIterator.next() + " on port " + portIterator.next());
+                InetAddress ip = (InetAddress) ipIterator.next();
+                int port = (int) portIterator.next();
+                System.out.println("Found file in host " + ip + " on port " + port);
+                Packet pingPacket = new Packet(PacketTypes.proReqPacket, 0, false, null, null, null);
+                ProReqData data = new ProReqData();
+                pingPacket.setData(Serializer.serializeToString(data));
+
+                try {
+                    Socket socket = new Socket(ip, port);
+                    socket.setSoTimeout(10000);
+                    reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+                    writer.println(Serializer.serializeToString(pingPacket));
+                    writer.flush();
+                    Date now = new Date();
+                    String res = reader.readLine();
+                    Packet resPacket = (Packet) Serializer.unserializeFromString(res);
+                    ProResData proResData = (ProResData)  Serializer.unserializeFromString(resPacket.getData());
+                    long ping = proResData.getTimestamp().getTime() - now.getTime();
+                    System.out.println("Host " + ip + " has ping " + ping);
+
+
+                    if(shortestPing > ping)
+                    {
+                        shortestPing = ping;
+
+                        fastestHost = ip;
+                        fastestPort = port;
+                    }
+
+                }catch (IOException e)
+                {
+                    System.out.println("Host " + ip + " timed out;");
+                }
+
+                System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + "with ping " + shortestPing);
             }
             if(i == 0)
             {
@@ -150,7 +198,6 @@ public class Client {
     {
         try{
 
-            Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
             output.println(pushServerSocket.getLocalPort());
             System.out.println("Conexão efetuada!\n"
                     + "Menu\n"
@@ -202,6 +249,12 @@ public class Client {
                 res.setFound(true);
                 resp.setData(Serializer.serializeToString(res));
             }
+        }if(p.getType() == PacketTypes.proReqPacket)
+        {
+            resp.setType(PacketTypes.proResPacket);
+            ProResData data = new ProResData();
+            data.setTimestamp(new Date());
+            resp.setData(Serializer.serializeToString(data));
         }
         writer.println(Serializer.serializeToString(resp));
         writer.flush();
