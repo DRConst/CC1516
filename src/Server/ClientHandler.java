@@ -10,9 +10,12 @@ package Server;
 import Commons.*;
 
 import java.io.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,6 +78,9 @@ public class ClientHandler implements Runnable{
                 activeUser = this.login.authenticateUser(reg.getUsername(), reg.getPassword());
                 activeUser.setLogged(!reg.isLogout());
                 login.setLoggedIn(activeUser.getUsername(), !reg.isLogout());
+                activeUser.setIp(reg.getIP());
+                activeUser.setPort(reg.getPort());
+                System.out.println( "Got user on port : " + activeUser.getPort() + " from IP : " + activeUser.getIp());
                 out.println("Success");
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -83,6 +89,48 @@ public class ClientHandler implements Runnable{
             } catch (UserNotFoundException e) {
                 e.printStackTrace();
             }
+        }else if(p.getType() == PacketTypes.conReqPacket)
+        {
+            ConReqData data = (ConReqData)Serializer.unserializeFromString(p.data);
+            Packet packet = new Packet(PacketTypes.conReqPacket, 1, false, null, null, null);
+            ConReqData reqData = new ConReqData(data.getSongName());
+            packet.setData(Serializer.convertToString(reqData));
+
+            ArrayList<InetAddress> hosts = new ArrayList<>();
+            ArrayList<Integer> ports = new ArrayList<>();
+            for(User u : login.getUsers().values())
+            {
+                if(u.isLogged() && !u.getUsername().equals(activeUser.getUsername()))
+                {
+                    Socket c = new Socket(u.getIp(), u.getPort());
+                    BufferedReader reader= new BufferedReader(new InputStreamReader(c.getInputStream()));
+                    PrintWriter writer= new PrintWriter(new OutputStreamWriter(c.getOutputStream()));
+
+                    writer.println(Serializer.convertToString(packet));
+                    writer.flush();
+                    String resp = reader.readLine();
+
+                    Packet r = (Packet) Serializer.unserializeFromString(resp);
+                    if(r.data != null)
+                    {
+                        ConResData resData = (ConResData) Serializer.unserializeFromString(r.data);
+
+                        if(resData.isFound())
+                        {
+                            hosts.add(u.getIp());
+                            ports.add(u.getPort());
+                        }
+                    }
+
+                }
+
+            }
+            packet.setType(PacketTypes.conResPacket);
+            ConResData toRet = new ConResData();
+            toRet.setIP(hosts);
+            toRet.setPorts(ports);
+            packet.setData(Serializer.serializeToString(toRet));
+            out.println(Serializer.serializeToString(packet));
         }
         return flag;
     }

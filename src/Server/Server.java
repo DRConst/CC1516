@@ -40,7 +40,7 @@ public class Server implements Runnable {
                     try {
                         sleep(1000);
                         serializer.writeObject(login);
-                        System.out.println("State saved");
+                        //System.out.println("State saved");
                     } catch (InterruptedException ex) {
                         Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
                         System.out.println("State asd");
@@ -82,7 +82,7 @@ public class Server implements Runnable {
             if (login == null) {
                 login = new Login();
                 login.setUserStorage(utilizadores);
-            } 
+            }
             ServerSocket s = new ServerSocket(20123);
             Socket client;
             System.out.println("Server is operational.");

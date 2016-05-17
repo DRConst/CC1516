@@ -1,16 +1,22 @@
 package Commons;
 
+import java.io.Serializable;
+
 /**
  * Created by drcon on 16/03/2016.
  */
-public class ConReqData extends Data {
-    String band, songName;
+public class ConReqData extends Data implements Serializable {
+    String songName;
 
-    public String getBand() {
-        return band;
+    public ConReqData(String songName) {
+        this.songName = songName;
     }
 
-    public void setBand(String band) {
-        this.band = band;
+    public String getSongName() {
+        return songName;
+    }
+
+    public void setSongName(String songName) {
+        this.songName = songName;
     }
 }

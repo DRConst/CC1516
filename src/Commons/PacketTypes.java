@@ -6,12 +6,12 @@ package Commons;
 public class PacketTypes {
     public static short registerPacket = 0;
     public static short loginPacket = 1;
-    static short conReqPacket = 1;
-    static short conResPacket = 2;
-    static short proReqPacket = 3;
-    static short proResPacket = 4;
-    static short requestPacket = 5;
-    static short filePacket = 6;
-    static short rsaProPacket = 7;
-    static short rsaResPacket = 8;
+    public static short conReqPacket = 2;
+    public static short conResPacket = 3;
+    public static short proReqPacket = 4;
+    public static short proResPacket = 5;
+    public static short requestPacket = 6;
+    public static short filePacket = 7;
+    public static short rsaProPacket = 8;
+    public static short rsaResPacket = 9;
 }

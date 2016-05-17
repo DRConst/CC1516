@@ -55,4 +55,20 @@ public class LoginData extends Data implements Serializable {
     public void setLogout(boolean logout) {
         isLogout = logout;
     }
+
+    public InetAddress getIP() {
+        return IP;
+    }
+
+    public void setIP(InetAddress IP) {
+        this.IP = IP;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
 }

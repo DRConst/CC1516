@@ -1,18 +1,23 @@
 package Commons;
 
+import java.io.Serializable;
+import java.net.InetAddress;
+import java.util.ArrayList;
+
 /**
  * Created by drcon on 16/03/2016.
  */
-public class ConResData extends Data {
-    String IP;
+public class ConResData extends Data implements Serializable{
+    ArrayList<InetAddress> IP;
+    ArrayList<Integer> ports;
     int port, ID, numHosts;
     boolean found;
 
-    public String getIP() {
+    public ArrayList<InetAddress> getIP() {
         return IP;
     }
 
-    public void setIP(String IP) {
+    public void setIP(ArrayList<InetAddress> IP) {
         this.IP = IP;
     }
 
@@ -46,5 +51,13 @@ public class ConResData extends Data {
 
     public void setFound(boolean found) {
         this.found = found;
+    }
+
+    public ArrayList<Integer> getPorts() {
+        return ports;
+    }
+
+    public void setPorts(ArrayList<Integer> ports) {
+        this.ports = ports;
     }
 }
