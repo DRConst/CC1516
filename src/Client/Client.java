@@ -52,17 +52,6 @@ public class Client {
         output = new PrintWriter (outbound.getOutputStream(),true);
 
 
-
-        Thread inboundT = new Thread(() -> {
-            try {
-                inboundLoop();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-
-        inboundT.start();
-
         Thread hbThread = new Thread(() -> {
             try {
                 initHeartbeat();
@@ -75,15 +64,17 @@ public class Client {
         hbThread.start();
 
         Thread pushThread = new Thread(() -> {
-            try {
-                while(true)
-                {
-                    Socket pushSocket = pushServerSocket.accept();
-                    pushLoop(pushSocket);
+
+                while(true) {
+                    try {
+                        Socket pushSocket = pushServerSocket.accept();
+                        pushSocket.setSoTimeout(1000);
+                        pushLoop(pushSocket);
+                    } catch (Exception e) {
+                        //e.printStackTrace();
+                    }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+
         });
 
         pushThread.start();
@@ -91,10 +82,6 @@ public class Client {
         fileDB = new FileDB();
 
         mainLoop();
-    }
-
-    public void inboundLoop() throws IOException {
-        Socket server = pushServerSocket.accept();
     }
 
     private void handleRegister() throws IOException {
@@ -143,6 +130,10 @@ public class Client {
             for(i = 0; i < resData.getIP().size(); i++)
             {
                 System.out.println("Found file in host " + ipIterator.next() + " on port " + portIterator.next());
+            }
+            if(i == 0)
+            {
+                System.out.println("No hosts found");
             }
         }
     }
