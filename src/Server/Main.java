@@ -14,8 +14,8 @@ import java.io.IOException;
 public class Main {
     
       public static void main(String[] args) throws IOException {
-          Users utilizadores=new Users(); 
-          Thread server = new Thread(new Server(utilizadores));
+          Users utilizadores = new Users();
+          Thread server = new Thread(new Server(utilizadores, new Integer(args[0])));
           server.start();
     }
 }

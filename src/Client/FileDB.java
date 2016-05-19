@@ -23,10 +23,10 @@ public class FileDB {
         fileList = new ArrayList<>();
         updateDBRec("./Music/", fileList);
     }
-    void updateDBRec(String dirName, ArrayList<String> l)
+    private void updateDBRec(String dirName, ArrayList<String> l)
     {
         File dir = new File(dirName);
-
+        if(dir.listFiles() != null)
         for(File f : dir.listFiles())
         {
             if(f.isDirectory())

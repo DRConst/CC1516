@@ -16,8 +16,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+
+
 
 /**
  *
@@ -86,8 +90,10 @@ public class ClientHandler implements Runnable{
                 e.printStackTrace();
             } catch (LoginFailedException e) {
                 e.printStackTrace();
+                out.println("Error");
             } catch (UserNotFoundException e) {
                 e.printStackTrace();
+                out.println("Error");
             }
         }else if(p.getType() == PacketTypes.conReqPacket)
         {
@@ -131,6 +137,15 @@ public class ClientHandler implements Runnable{
             toRet.setPorts(ports);
             packet.setData(Serializer.serializeToString(toRet));
             out.println(Serializer.serializeToString(packet));
+        }else if(p.getType() == PacketTypes.proReqPacket)
+        {
+            Packet packet = new Packet(PacketTypes.proResPacket, 1, false, null, null, null);
+            Date now = new Date();
+            ProResData data = new ProResData();
+            data.setTimestamp(now);
+            packet.setData(Serializer.serializeToString(data));
+            out.println(Serializer.serializeToString(packet));
+            out.flush();
         }
         return flag;
     }
@@ -186,6 +201,7 @@ public class ClientHandler implements Runnable{
     public void run() {
         try {  
             try {
+
                 String port = in.readLine();
                 clientPush = new Socket(clientMain.getInetAddress(), new Integer(port));
 

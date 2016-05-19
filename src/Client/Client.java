@@ -32,17 +32,65 @@ public class Client {
 
     FileDB fileDB;
 
+    boolean loggedIn;
+
     public Client(ServerSocket pushServerSocket, Socket outbound) {
         this.pushServerSocket = pushServerSocket;
         this.outbound = outbound;
     }
 
+    //Enumerate servers and find the ones with the lowest ping;
+    private int chooseServer()
+    {
+        long shortestPing = 999999999;
+        int fastestServer = 20100;
+        int i = fastestServer;
+        BufferedReader reader;
+        PrintWriter writer;
+        try
+        {
+            while(true)
+            {
+                Socket s = new Socket(host, i + 1);
+
+                Packet packet = new Packet(PacketTypes.proReqPacket, 0, false, null, null, null);
+                ProReqData proReqData = new ProReqData();
+                packet.setData(Serializer.convertToString(proReqData));
+
+                reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+                Date now = new Date();
+                writer.println(Serializer.convertToString(packet));
+                writer.flush();
+                String res = reader.readLine();
+
+                packet = (Packet) Serializer.unserializeFromString(res);
+                ProResData proResData = (ProResData) Serializer.unserializeFromString(packet.getData());
+
+                long ping = proResData.getTimestamp().getTime() - now.getTime();
+
+                if(ping < shortestPing)
+                {
+                    fastestServer = i;
+                }
+                s.close();
+                i += 20;
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return fastestServer;
+    }
     public Client() throws IOException {
         pushServerSocket = new ServerSocket(0);
         System.out.print("Inited push server on port ");
         System.out.println(pushServerSocket.getLocalPort());
         host = "localhost";
-        outbound = new Socket(host, 20123);
+        outbound = new Socket(host, chooseServer());
 
         //Set up comms
 
@@ -98,6 +146,8 @@ public class Client {
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
         System.out.println(resp);
+        if(resp.equals("Success"))
+            loggedIn = true;
     }
 
     private void handleLogin() throws IOException {
@@ -187,6 +237,7 @@ public class Client {
     }
 
     private void handleLogout() throws IOException {
+        loggedIn = false;
         Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
         packet.setType(PacketTypes.loginPacket);
         packet.setData(Serializer.convertToString(new LoginData(uName, pass , true)));
@@ -199,16 +250,20 @@ public class Client {
         try{
 
             output.println(pushServerSocket.getLocalPort());
-            System.out.println("Conexão efetuada!\n"
+            System.out.println("Connection Established!\n"
                     + "Menu\n"
-                    + "Registar" + "...\n"
+                    + "Register" + "...\n"
                     + "Login" + "...\n");
+            if(loggedIn)
+            {
+                System.out.println("Request File...");
+            }
             String s,resp;
             resp = "";
             while(!resp.equals("Saiu do sistema")){
                 boolean rec = false;
                 s = keyboard.readLine();
-                if(s.equalsIgnoreCase("Registar"))
+                if(s.equalsIgnoreCase("Register"))
                 {
                     handleRegister();
                 }
@@ -217,11 +272,11 @@ public class Client {
                     handleLogin();
                 }
 
-                if(s.equalsIgnoreCase("Request File"))
+                if(s.equalsIgnoreCase("Request File") && loggedIn)
                 {
                     handleRequest();
                 }
-                if(s.equalsIgnoreCase("Logout"))
+                if(s.equalsIgnoreCase("Logout") && loggedIn)
                 {
                     handleLogout();
                 }

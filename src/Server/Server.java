@@ -5,13 +5,19 @@
  */
 package Server;
 
-import java.io.BufferedReader;
-import java.io.IOException;
+import Commons.PacketTypes;
+import Commons.ProResData;
+import Commons.Serializer;
+import Commons.UnexpectedPacketException;
+
+import java.io.*;
+
 import static java.lang.Thread.sleep;
 
-import java.io.InputStreamReader;
+import java.lang.invoke.SerializedLambda;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,12 +35,29 @@ public class Server implements Runnable {
     private Users utilizadores;
     private Login login = null;
     Commons.Serializer serializer = new Commons.Serializer();
-
+    int port;
     
-    public Server(Users utilizadores){
+    public Server(Users utilizadores, int port){
         this.utilizadores=utilizadores;
+        this.port = port;
     }
-    
+    private void pingHandler(Socket s) throws IOException, UnexpectedPacketException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        PrintWriter writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+        String str = reader.readLine();
+        Packet p = (Packet) Serializer.unserializeFromString(str);
+
+        if(p.type != PacketTypes.proReqPacket)
+            throw new UnexpectedPacketException("Expecting Probe Request Packet");
+
+        ProResData proResData = new ProResData();
+        proResData.setTimestamp(new Date());
+        p.setData(Serializer.serializeToString(proResData));
+        writer.println(Serializer.serializeToString(p));
+        writer.flush();
+        s.close();
+    }
     private void saveState() {
             while(true){
                     try {
@@ -83,7 +106,7 @@ public class Server implements Runnable {
                 login = new Login();
                 login.setUserStorage(utilizadores);
             }
-            ServerSocket s = new ServerSocket(20123);
+            ServerSocket s = new ServerSocket(port);
             Socket client;
             System.out.println("Server is operational.");
             Thread loginsaver = new Thread(new Runnable(){
@@ -99,6 +122,23 @@ public class Server implements Runnable {
                 }
             });
             ui.start();
+
+            Thread pingThread = new Thread(new Runnable(){
+                public void run(){
+                    try {
+                        ServerSocket pingSS = new ServerSocket(port + 1);
+                        while(true){
+                            Socket s = pingSS.accept();
+                            pingHandler(s);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (UnexpectedPacketException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            pingThread.start();
             
             while (true) {
                 client = s.accept ();
