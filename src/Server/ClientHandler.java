@@ -10,10 +10,7 @@ package Server;
 import Commons.*;
 
 import java.io.*;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,6 +33,7 @@ public class ClientHandler implements Runnable{
     private Users utilizadores;
     private Login login;
     private User activeUser = null;
+    int serverPortID;
     
     public ClientHandler(Socket client, Users utilizadores, Login login) throws IOException{
         this.clientMain = client;
@@ -128,6 +126,43 @@ public class ClientHandler implements Runnable{
                         }
                     }
 
+                }
+
+
+                if(ports.size() == 0 || hosts.size()==0)
+                {
+                    // Consult other servers
+
+                    BufferedReader reader;
+                    PrintWriter writer;
+                    int i = 20100;
+                    String host = "localhost";
+                    try
+                    {
+                        while(true)
+                        {
+                            if(i == serverPortID)
+                                i+=20;
+                            Socket s = new Socket(host, i + 1);
+
+                            Packet serverRequestPacket = new Packet(PacketTypes.requestPacket, 0, false, null, null, null);
+                            RequestData requestData = new RequestData();
+                            serverRequestPacket.setData(Serializer.convertToString(requestData));
+
+                            reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                            writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+
+
+
+                            s.close();
+                            i += 20;
+                        }
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
 
             }
