@@ -21,6 +21,7 @@ public class Login implements Serializable
     private HashMap<String, byte[]> hashes, salts;
     private HashMap<String, User> users;
     private HashMap<String, Boolean> loggedIn;
+    private HashMap<String, Integer> loggedInServerID;
     private Users userStorage;
 
 
@@ -30,6 +31,7 @@ public class Login implements Serializable
         salts = new HashMap<>();
         users = new HashMap<>();
         loggedIn = new HashMap<>();
+        loggedInServerID = new HashMap<>();
     }
 
     public Login(Login l)
@@ -38,6 +40,7 @@ public class Login implements Serializable
         salts = l.getSalts();
         users = l.getUsers();
         loggedIn = l.getLoggedIn();
+        loggedInServerID = l.getLoggedInServerID();
     }
 
     public synchronized  void  registerUser(String userName, String password) throws IOException, NoSuchAlgorithmException, UserRegisteredException {
@@ -54,6 +57,7 @@ public class Login implements Serializable
             users.put(userName, u);
             userStorage.addUser(u);
             loggedIn.put(userName,false);
+            loggedInServerID.put(userName, -1);
 
         }
     }
@@ -108,10 +112,16 @@ public class Login implements Serializable
         }
     }
 
-    public synchronized void setLoggedIn(String userName, Boolean status)
+    public synchronized void setLoggedIn(String userName, Boolean status, int serverID)
     {
         if(users.containsKey(userName))
+        {
             loggedIn.replace(userName, status);
+            if(!status)
+                serverID = -1;
+            loggedInServerID.replace(userName, serverID);
+        }
+
     }
 
     public User getRegisteredUser(String userName)
@@ -230,5 +240,24 @@ public class Login implements Serializable
     public Login clone(Login l)
     {
         return new Login(l);
+    }
+
+    public boolean loggedIntoServer(String user, int id)
+    {
+        boolean toRet = false;
+
+        if(loggedIn.get(user) && loggedInServerID.get(user) == id)
+            toRet = true;
+
+
+        return toRet;
+    }
+
+    public HashMap<String, Integer> getLoggedInServerID() {
+        return loggedInServerID;
+    }
+
+    public void setLoggedInServerID(HashMap<String, Integer> loggedInServerID) {
+        this.loggedInServerID = loggedInServerID;
     }
 }

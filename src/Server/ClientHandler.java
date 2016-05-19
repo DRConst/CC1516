@@ -9,11 +9,14 @@ package Server;
 
 import Commons.*;
 
+import javax.sql.rowset.serial.SerialArray;
 import java.io.*;
 import java.net.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,14 +36,20 @@ public class ClientHandler implements Runnable{
     private Users utilizadores;
     private Login login;
     private User activeUser = null;
-    int serverPortID;
-    
-    public ClientHandler(Socket client, Users utilizadores, Login login) throws IOException{
+    private int serverID;
+    private ArrayList<Integer> secondaryServerPorts;
+    private ArrayList<InetAddress> secondaryServerIPs;
+    private ReentrantLock secondaryServerLock;
+    public ClientHandler(Socket client, Users utilizadores, Login login, int serverID, ArrayList<Integer> secondaryServerPorts, ArrayList<InetAddress> secondaryServerIPs, ReentrantLock reentrantLock) throws IOException{
         this.clientMain = client;
         this.in= new BufferedReader(new InputStreamReader(client.getInputStream()));
         this.out= new PrintWriter(client.getOutputStream(),true);
         this.utilizadores=utilizadores;
         this.login = login;
+        this.serverID = serverID;
+        this.secondaryServerPorts = secondaryServerPorts;
+        this.secondaryServerIPs  =secondaryServerIPs;
+        this.secondaryServerLock = reentrantLock;
 
     }
     
@@ -53,14 +62,18 @@ public class ClientHandler implements Runnable{
         {
             RegisterData reg = (RegisterData) Serializer.unserializeFromString(p.data);
             try {
-                this.login.registerUser(reg.getUserName(), reg.getPassword());
+                if(!reg.isServer()) {
+                    this.login.registerUser(reg.getUserName(), reg.getPassword());
 
-                activeUser = login.authenticateUser(reg.getUserName(), reg.getPassword());
-                activeUser.setPort(reg.getPort());
-                activeUser.setIp(reg.getIP());
+                    activeUser = login.authenticateUser(reg.getUserName(), reg.getPassword());
+                    activeUser.setPort(reg.getPort());
+                    activeUser.setIp(reg.getIP());
 
 
-                out.println("Success");
+                    out.println("Success");
+                }else{
+
+                }
 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -79,7 +92,7 @@ public class ClientHandler implements Runnable{
                 //TODO: More complex info e.g. user was already logged out
                 activeUser = this.login.authenticateUser(reg.getUsername(), reg.getPassword());
                 activeUser.setLogged(!reg.isLogout());
-                login.setLoggedIn(activeUser.getUsername(), !reg.isLogout());
+                login.setLoggedIn(activeUser.getUsername(), !reg.isLogout(), serverID);
                 activeUser.setIp(reg.getIP());
                 activeUser.setPort(reg.getPort());
                 System.out.println( "Got user on port : " + activeUser.getPort() + " from IP : " + activeUser.getIp());
@@ -104,68 +117,82 @@ public class ClientHandler implements Runnable{
             ArrayList<Integer> ports = new ArrayList<>();
             for(User u : login.getUsers().values())
             {
-                if(u.isLogged() && !u.getUsername().equals(activeUser.getUsername()))
+                if(u.isLogged() && login.loggedIntoServer(u.getUsername(), serverID) && !u.getUsername().equals(activeUser.getUsername()))
                 {
-                    Socket c = new Socket(u.getIp(), u.getPort());
-                    BufferedReader reader= new BufferedReader(new InputStreamReader(c.getInputStream()));
-                    PrintWriter writer= new PrintWriter(new OutputStreamWriter(c.getOutputStream()));
+                    try {
+                        Socket c = new Socket(u.getIp(), u.getPort());
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(c.getInputStream()));
+                        PrintWriter writer = new PrintWriter(new OutputStreamWriter(c.getOutputStream()));
 
-                    writer.println(Serializer.convertToString(packet));
-                    writer.flush();
-                    String resp = reader.readLine();
+                        writer.println(Serializer.convertToString(packet));
+                        writer.flush();
+                        String resp = reader.readLine();
 
-                    Packet r = (Packet) Serializer.unserializeFromString(resp);
-                    if(r.data != null)
-                    {
-                        ConResData resData = (ConResData) Serializer.unserializeFromString(r.data);
+                        Packet r = (Packet) Serializer.unserializeFromString(resp);
+                        if (r.data != null) {
+                            ConResData resData = (ConResData) Serializer.unserializeFromString(r.data);
 
-                        if(resData.isFound())
-                        {
-                            hosts.add(u.getIp());
-                            ports.add(u.getPort());
+                            if (resData.isFound()) {
+                                hosts.add(u.getIp());
+                                ports.add(u.getPort());
+                            }
                         }
+                    }catch (IOException e)
+                    {
+                        System.out.println(e.getMessage());
                     }
 
                 }
 
+            }
 
-                if(ports.size() == 0 || hosts.size()==0)
-                {
-                    // Consult other servers
+            if( serverID == 0 && (ports.size() == 0 || hosts.size()==0 ))
+            {
+                // Consult other servers
 
-                    BufferedReader reader;
-                    PrintWriter writer;
-                    int i = 20100;
-                    String host = "localhost";
+                BufferedReader reader;
+                PrintWriter writer;
+                String host = "localhost";
+                Iterator portIterator = secondaryServerPorts.iterator();
+                Iterator ipIterator = secondaryServerIPs.iterator();
+                while(portIterator.hasNext() && ipIterator.hasNext())
                     try
                     {
-                        while(true)
-                        {
-                            if(i == serverPortID)
-                                i+=20;
-                            Socket s = new Socket(host, i + 1);
 
-                            Packet serverRequestPacket = new Packet(PacketTypes.requestPacket, 0, false, null, null, null);
-                            RequestData requestData = new RequestData();
-                            serverRequestPacket.setData(Serializer.convertToString(requestData));
+                        Socket s = new Socket((InetAddress) ipIterator.next(), (Integer) portIterator.next());
 
-                            reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                            writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+                        Packet serverRequestPacket = new Packet(PacketTypes.conReqPacket, 0, false, null, null, null);
+                        ConReqData requestData = new ConReqData(reqData.getSongName(), true);
+                        serverRequestPacket.setData(Serializer.convertToString(requestData));
+
+                        reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                        writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+                        writer.println(-2);
+                        writer.flush();
+
+                        serverRequestPacket.setData(Serializer.serializeToString(requestData));
+                        writer.println(Serializer.serializeToString(serverRequestPacket));
+                        writer.flush();
+
+                        String response = reader.readLine();
+
+                        Packet serverResponsePacket = (Packet) Serializer.unserializeFromString(response);
+                        ConResData resData = (ConResData) Serializer.unserializeFromString(serverResponsePacket.getData());
+
+                        hosts.addAll(resData.getIP());
+                        ports.addAll(resData.getPorts());
 
 
+                        s.close();
 
-
-                            s.close();
-                            i += 20;
-                        }
                     } catch (UnknownHostException e) {
                         e.printStackTrace();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }
-
             }
+
             packet.setType(PacketTypes.conResPacket);
             ConResData toRet = new ConResData();
             toRet.setIP(hosts);
@@ -232,42 +259,63 @@ public class ClientHandler implements Runnable{
     }
     
     @Override
-    @SuppressWarnings("empty-statement")
     public void run() {
         try {  
             try {
-
                 String port = in.readLine();
-                clientPush = new Socket(clientMain.getInetAddress(), new Integer(port));
 
-                Thread heartbeatThread = new Thread(() -> {
+                if(port.equals("-1"))
+                {
 
-                    try
-                    {
 
-                        heartbeat();
-                    } catch (ClientTimedOutException e) {
-                        System.out.println("Client on port " + clientMain.getLocalPort() + " timed out.");
+                    String register = in.readLine();
 
-                        if(activeUser != null)
-                        {
-                            activeUser.setLogged(false);
-                            login.setLoggedIn(activeUser.getUsername(), false);
+                    Packet registerPacket = (Packet) Serializer.unserializeFromString(register);
+                    RegisterData data = (RegisterData) Serializer.unserializeFromString(registerPacket.getData());
+
+                    secondaryServerLock.lock();
+
+                    secondaryServerIPs.add(data.getIP());
+                    secondaryServerPorts.add(data.getPort());
+
+                    secondaryServerLock.unlock();
+                }
+                else if(port.equals("-2"))
+                {
+                    //Master server requesting file list
+
+                    activeUser = new User("", "", -1);
+                }
+                else
+                {
+                        clientPush = new Socket(clientMain.getInetAddress(), new Integer(port));
+
+                        Thread heartbeatThread = new Thread(() -> {
+
+                            try {
+
+                                heartbeat();
+                            } catch (ClientTimedOutException e) {
+                                System.out.println("Client on port " + clientMain.getLocalPort() + " timed out.");
+
+                                if (activeUser != null) {
+                                    activeUser.setLogged(false);
+                                    login.setLoggedIn(activeUser.getUsername(), false, serverID);
+                                }
+
+                            }
+                        });
+
+                        try {
+                            initHeartbeat();
+                        } catch (IOException e) {//Failed to open ports
+                            System.out.println("Error setting up heartbeat, please try again");
                         }
 
-                    }
-                });
+                        heartbeatThread.start();
 
-                try {
-                    initHeartbeat();
-                } catch (IOException e) {//Failed to open ports
-                    System.out.println("Error setting up heartbeat, please try again");
                 }
-
-                heartbeatThread.start();
-
-
-                while(handle()!=0);
+                while (handle() != 0) ;
             } catch (InterruptedException ex) {
                 Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -275,6 +323,9 @@ public class ClientHandler implements Runnable{
             this.out.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
+            out.println("Error");
+            if(secondaryServerLock.isHeldByCurrentThread())
+                secondaryServerLock.unlock();
           }
     }
     

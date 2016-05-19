@@ -5,20 +5,21 @@
  */
 package Server;
 
-import Commons.PacketTypes;
-import Commons.ProResData;
-import Commons.Serializer;
-import Commons.UnexpectedPacketException;
+import Commons.*;
 
 import java.io.*;
 
 import static java.lang.Thread.sleep;
 
 import java.lang.invoke.SerializedLambda;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,10 +37,20 @@ public class Server implements Runnable {
     private Login login = null;
     Commons.Serializer serializer = new Commons.Serializer();
     int port;
+    int serverID;
+    private ArrayList<Integer> secondaryServerPorts;
+    private ArrayList<InetAddress> secondaryServerIPs;
+
+    ReentrantLock secondaryServerLock;
     
-    public Server(Users utilizadores, int port){
+    public Server(Users utilizadores, int port, int serverID){
         this.utilizadores=utilizadores;
         this.port = port;
+        this.serverID = serverID;
+
+        secondaryServerIPs = new ArrayList<>();
+        secondaryServerPorts = new ArrayList<>();
+        secondaryServerLock = new ReentrantLock();
     }
     private void pingHandler(Socket s) throws IOException, UnexpectedPacketException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -62,7 +73,7 @@ public class Server implements Runnable {
             while(true){
                     try {
                         sleep(1000);
-                        serializer.writeObject(login);
+                        serializer.writeObject(login, new Integer(serverID).toString());
                         //System.out.println("State saved");
                     } catch (InterruptedException ex) {
                         Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
@@ -101,7 +112,7 @@ public class Server implements Runnable {
     @Override
     public void run() {
         try {
-            login = (Login) serializer.readObject("Server.Login");
+            login = (Login) serializer.readObject("Server.Login" + serverID);
             if (login == null) {
                 login = new Login();
                 login.setUserStorage(utilizadores);
@@ -109,33 +120,53 @@ public class Server implements Runnable {
             ServerSocket s = new ServerSocket(port);
             Socket client;
             System.out.println("Server is operational.");
-            Thread loginsaver = new Thread(new Runnable(){
-                public void run(){
-                    saveState();
-                }
+
+
+            if(port != 20100)
+            {
+                //Register with master server
+                System.out.println("Registering with master server");
+                Socket master = new Socket("localhost", 20100);
+
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(master.getInputStream()));
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(master.getOutputStream()));
+
+
+                writer.println("-1");
+                writer.flush();
+
+                Packet masterRegistration = new Packet(PacketTypes.registerPacket, 0, false, null, null, null);
+                RegisterData registerData = new RegisterData(true, s.getInetAddress(), port);
+                masterRegistration.setData(Serializer.serializeToString(registerData));
+                writer.println(Serializer.serializeToString(masterRegistration));
+                writer.flush();
+            }
+
+
+
+
+            Thread loginsaver = new Thread(() -> {
+                saveState();
             });
             loginsaver.start();
 
-            Thread ui = new Thread(new Runnable(){
-                public void run(){
-                    debugUI();
-                }
+            Thread ui = new Thread(() -> {
+                debugUI();
             });
             ui.start();
 
-            Thread pingThread = new Thread(new Runnable(){
-                public void run(){
-                    try {
-                        ServerSocket pingSS = new ServerSocket(port + 1);
-                        while(true){
-                            Socket s = pingSS.accept();
-                            pingHandler(s);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (UnexpectedPacketException e) {
-                        e.printStackTrace();
+            Thread pingThread = new Thread(() -> {
+                try {
+                    ServerSocket pingSS = new ServerSocket(port + 1);
+                    while(true){
+                        Socket s1 = pingSS.accept();
+                        pingHandler(s1);
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (UnexpectedPacketException e) {
+                    e.printStackTrace();
                 }
             });
             pingThread.start();
@@ -143,7 +174,7 @@ public class Server implements Runnable {
             while (true) {
                 client = s.accept ();
                 System.out.println("Cliente ligado.");
-                Thread t = new Thread(new ClientHandler(client,utilizadores,login));
+                Thread t = new Thread(new ClientHandler(client,utilizadores,login, serverID, secondaryServerPorts, secondaryServerIPs, secondaryServerLock));
                 t.start();
             }
         } catch (IOException |ClassNotFoundException ex) {

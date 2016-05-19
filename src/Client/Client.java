@@ -73,6 +73,7 @@ public class Client {
                 if(ping < shortestPing)
                 {
                     fastestServer = i;
+                    shortestPing = ping;
                 }
                 s.close();
                 i += 20;
@@ -140,12 +141,13 @@ public class Client {
     private void handleRegister() throws IOException {
         Packet packet = new Packet(PacketTypes.registerPacket, 0, false,null, null, null);
         System.out.println("Username e Password");
-        String user = keyboard.readLine();
-        String pass = keyboard.readLine();
-        packet.setData(Serializer.convertToString(new RegisterData(pushServerSocket.getInetAddress(), pushServerSocket.getLocalPort(),user, pass )));
+        uName = keyboard.readLine();
+        pass = keyboard.readLine();
+        packet.setData(Serializer.convertToString(new RegisterData(pushServerSocket.getInetAddress(), pushServerSocket.getLocalPort(),uName, pass )));
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
         System.out.println(resp);
+
         if(resp.equals("Success"))
             loggedIn = true;
     }
@@ -162,6 +164,8 @@ public class Client {
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
         System.out.println(resp);
+        if(resp.equals("Success"))
+            loggedIn = true;
     }
 
     private void handleRequest() throws IOException, UnexpectedPacketException {
@@ -173,6 +177,11 @@ public class Client {
         packet.setData(Serializer.convertToString(d));
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
+        if(resp.equals("Error"))
+        {
+            System.out.println("Error");
+            return;
+        }
         Packet r = (Packet)Serializer.unserializeFromString(resp);
 
 
@@ -186,7 +195,7 @@ public class Client {
             Iterator portIterator = resData.getPorts().iterator();
             int fastestPort = 0;
             InetAddress fastestHost = null;
-            long shortestPing = 0;
+            long shortestPing = 999999;
 
             BufferedReader reader;
             PrintWriter writer;

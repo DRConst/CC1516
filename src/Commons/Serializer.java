@@ -81,6 +81,30 @@ public class Serializer {
         locks.get(name).unlock();
     }
 
+    public void writeObject(Object o, String n) throws IOException { //Multithreading might pose problems with concurrent writes so lock the file
+
+
+        String name = o.getClass().getName();
+
+        name = name + n;
+        if(!locks.containsKey(name))
+        {//First time writing to file, init lock
+            hashLock.lock();//Make sure we dont get race conditions creating locks
+            locks.put(name, new ReentrantLock());
+            hashLock.unlock();
+        }
+        //Lock is already inited, acquire it
+        locks.get(name).lock();
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(name + ".saved"))) {
+            oos.writeObject(o);
+        }catch (Exception e)
+        {
+            locks.get(name).unlock();
+            throw new IOException();
+        }
+        locks.get(name).unlock();
+    }
+
     public static String serializeToString(Object o)
     {
         ByteArrayOutputStream bao = new ByteArrayOutputStream();

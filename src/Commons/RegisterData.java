@@ -8,7 +8,7 @@ import java.net.InetAddress;
  * Created by drcon on 16/03/2016.
  */
 public class RegisterData extends Data implements Serializable{
-    boolean in;
+    boolean server;
     InetAddress IP;
     int port;
     int ID;
@@ -22,12 +22,10 @@ public class RegisterData extends Data implements Serializable{
         this.password = password;
     }
 
-    public boolean isIn() {
-        return in;
-    }
-
-    public void setIn(boolean in) {
-        this.in = in;
+    public RegisterData(boolean server, InetAddress IP, int port) {
+        this.server = server;
+        this.IP = IP;
+        this.port = port;
     }
 
     public InetAddress getIP() {
@@ -68,5 +66,13 @@ public class RegisterData extends Data implements Serializable{
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isServer() {
+        return server;
+    }
+
+    public void setServer(boolean server) {
+        this.server = server;
     }
 }
