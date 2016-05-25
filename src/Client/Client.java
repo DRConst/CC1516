@@ -236,7 +236,7 @@ public class Client {
                     System.out.println("Host " + ip + " timed out;");
                 }
 
-                System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + "with ping " + shortestPing);
+                System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + " with ping " + shortestPing);
             }
             if(i == 0)
             {
