@@ -10,7 +10,7 @@ import java.util.ArrayList;
 public class ConResData extends Data implements Serializable{
     ArrayList<InetAddress> IP;
     ArrayList<Integer> ports;
-    int port, ID, numHosts;
+    int numHosts;
     boolean found;
 
     public ArrayList<InetAddress> getIP() {
@@ -21,21 +21,6 @@ public class ConResData extends Data implements Serializable{
         this.IP = IP;
     }
 
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public int getID() {
-        return ID;
-    }
-
-    public void setID(int ID) {
-        this.ID = ID;
-    }
 
     public int getNumHosts() {
         return numHosts;

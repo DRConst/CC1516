@@ -12,6 +12,6 @@ public class PacketTypes {
     public static short proResPacket = 5;
     public static short transReqPacket = 6;
     public static short transResPacket = 7;
-    public static short rsaProPacket = 8;
+    public static short servReqPacket = 8;
     public static short rsaResPacket = 9;
 }

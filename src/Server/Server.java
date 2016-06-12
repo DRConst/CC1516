@@ -40,6 +40,8 @@ public class Server implements Runnable {
     int serverID;
     private ArrayList<Integer> secondaryServerPorts;
     private ArrayList<InetAddress> secondaryServerIPs;
+    InetAddress addr;
+
 
     ReentrantLock secondaryServerLock;
     
@@ -59,14 +61,27 @@ public class Server implements Runnable {
         String str = reader.readLine();
         Packet p = (Packet) Serializer.unserializeFromString(str);
 
-        if(p.type != PacketTypes.proReqPacket)
-            throw new UnexpectedPacketException("Expecting Probe Request Packet");
+        if(p.type == PacketTypes.proReqPacket)
+        {
+            ProResData proResData = new ProResData();
+            proResData.setTimestamp(new Date());
+            p.setData(Serializer.serializeToString(proResData));
 
-        ProResData proResData = new ProResData();
-        proResData.setTimestamp(new Date());
-        p.setData(Serializer.serializeToString(proResData));
+
+        }if(p.type == PacketTypes.servReqPacket)
+        {
+            ArrayList<InetAddress> addresses = (ArrayList<InetAddress>) secondaryServerIPs.clone();
+            addresses.add(addr);
+            ArrayList<Integer> ports = (ArrayList<Integer>) secondaryServerPorts.clone();
+            ports.add(port);
+            ServResData servResData = new ServResData(ports, addresses);
+            p.setData(Serializer.serializeToString(servResData));
+        }
+
         writer.println(Serializer.serializeToString(p));
         writer.flush();
+
+
         s.close();
     }
     private void saveState() {
@@ -118,6 +133,7 @@ public class Server implements Runnable {
                 login.setUserStorage(utilizadores);
             }
             ServerSocket s = new ServerSocket(port);
+            addr = s.getInetAddress();
             Socket client;
             System.out.println("Server is operational.");
 

@@ -15,6 +15,7 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -40,13 +41,16 @@ public class Client {
 
     boolean loggedIn;
 
+    Integer fastestServerPort;
+    InetAddress fastestServerAddr;
+
     public Client(ServerSocket pushServerSocket, Socket outbound) {
         this.pushServerSocket = pushServerSocket;
         this.outbound = outbound;
     }
 
     //Enumerate servers and find the ones with the lowest ping;
-    private int chooseServer()
+    private void chooseServer()
     {
         long shortestPing = 999999999;
         int fastestServer = 20100;
@@ -55,12 +59,32 @@ public class Client {
         PrintWriter writer;
         try
         {
-            while(true)
-            {
-                Socket s = new Socket(host, i + 1);
+            Socket s = new Socket(host, i + 1);
 
-                Packet packet = new Packet(PacketTypes.proReqPacket, 0, false, null, null, null);
-                ProReqData proReqData = new ProReqData();
+            Packet packet = new Packet(PacketTypes.servReqPacket, 0, false, null, null, null);
+            ProReqData proReqData = new ProReqData();
+            packet.setData(Serializer.convertToString(proReqData));
+
+            reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+            writer.println(Serializer.convertToString(packet));
+            writer.flush();
+            String res = reader.readLine();
+
+            packet = (Packet) Serializer.unserializeFromString(res);
+            ServResData servResData = (ServResData) Serializer.unserializeFromString(packet.getData());
+            ArrayList<InetAddress> inetAddresses = servResData.getSecondaryServerIPs();
+            ArrayList<Integer> ports = servResData.getSecondaryServerPorts();
+            Iterator<InetAddress> addressIterator = inetAddresses.iterator();
+            Iterator<Integer> portIterator = ports.iterator();
+            while(addressIterator.hasNext() && portIterator.hasNext())
+            {
+                int port = portIterator.next();
+                InetAddress addr = addressIterator.next();
+                s = new Socket(addr, port + 1);
+                packet = new Packet(PacketTypes.proReqPacket, 0, false, null, null, null);
+                proReqData = new ProReqData();
                 packet.setData(Serializer.convertToString(proReqData));
 
                 reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -69,7 +93,7 @@ public class Client {
                 Date now = new Date();
                 writer.println(Serializer.convertToString(packet));
                 writer.flush();
-                String res = reader.readLine();
+                res = reader.readLine();
 
                 packet = (Packet) Serializer.unserializeFromString(res);
                 ProResData proResData = (ProResData) Serializer.unserializeFromString(packet.getData());
@@ -78,11 +102,11 @@ public class Client {
 
                 if(ping < shortestPing)
                 {
-                    fastestServer = i;
+                    fastestServerPort = port;
+                    fastestServerAddr = addr;
                     shortestPing = ping;
                 }
                 s.close();
-                i += 20;
             }
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -90,14 +114,14 @@ public class Client {
             e.printStackTrace();
         }
 
-        return fastestServer;
     }
     public Client() throws IOException {
         pushServerSocket = new ServerSocket(0);
         System.out.print("Inited push server on port ");
         System.out.println(pushServerSocket.getLocalPort());
         host = "localhost";
-        outbound = new Socket(host, chooseServer());
+        chooseServer();
+        outbound = new Socket(fastestServerAddr, fastestServerPort);
 
         //Set up comms
 
@@ -129,9 +153,9 @@ public class Client {
                         first = false;
                         pushLoop(pushSocket);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        //e.printStackTrace();
                     }catch (Exception e) {
-                        e.printStackTrace();
+                        //e.printStackTrace();
                     }
                 }
 
