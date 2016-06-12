@@ -163,6 +163,7 @@ public class ClientHandler implements Runnable{
 
                         Packet serverRequestPacket = new Packet(PacketTypes.conReqPacket, 0, false, null, null, null);
                         ConReqData requestData = new ConReqData(reqData.getSongName(), true);
+                        requestData.setPropagate(false);
                         serverRequestPacket.setData(Serializer.convertToString(requestData));
 
                         reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -191,6 +192,36 @@ public class ClientHandler implements Runnable{
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+            }
+            else if((ports.size() == 0 || hosts.size()==0 ) && reqData.isPropagate())
+            {
+                Socket s = new Socket("localhost", 20100);
+
+                Packet serverRequestPacket = new Packet(PacketTypes.conReqPacket, 0, false, null, null, null);
+                ConReqData requestData = new ConReqData(reqData.getSongName(), true);
+                requestData.setPropagate(true);
+                serverRequestPacket.setData(Serializer.convertToString(requestData));
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
+
+                writer.println(-2);
+                writer.flush();
+
+                serverRequestPacket.setData(Serializer.serializeToString(requestData));
+                writer.println(Serializer.serializeToString(serverRequestPacket));
+                writer.flush();
+
+                String response = reader.readLine();
+
+                Packet serverResponsePacket = (Packet) Serializer.unserializeFromString(response);
+                ConResData resData = (ConResData) Serializer.unserializeFromString(serverResponsePacket.getData());
+
+                hosts.addAll(resData.getIP());
+                ports.addAll(resData.getPorts());
+
+
+                s.close();
             }
 
             packet.setType(PacketTypes.conResPacket);
@@ -282,7 +313,7 @@ public class ClientHandler implements Runnable{
                 }
                 else if(port.equals("-2"))
                 {
-                    //Master server requesting file list
+                    //Server requesting file list
 
                     activeUser = new User("", "", -1);
                 }

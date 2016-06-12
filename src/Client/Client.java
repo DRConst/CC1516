@@ -203,7 +203,8 @@ public class Client {
         String fileName;
         fileName = keyboard.readLine();
         packet.setType(PacketTypes.conReqPacket);
-        ConReqData d = new ConReqData(fileName);
+        ConReqData d = new ConReqData(fileName, true);
+        d.setPropagate(true);
         packet.setData(Serializer.serializeToString(d));
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
