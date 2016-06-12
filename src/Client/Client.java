@@ -253,7 +253,12 @@ public class Client {
                 writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
 
                 Thread thread = new Thread(() -> {
-                    Packet filePacket = udpTranseiver.receiveData();
+                    Packet filePacket = null;
+                    try {
+                        udpTranseiver.receiveData(fileName);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     saveFile(filePacket);
                 });
 
@@ -376,6 +381,8 @@ public class Client {
                     try {
                         udpTranseiver.transmitData(file);
                     } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }

@@ -1,9 +1,9 @@
 package Commons;
 
 import Server.Packet;
+import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -29,7 +29,7 @@ public class UDPTranseiver {
         port = socket.getLocalPort();
     }
 
-    public void transmitData(byte data[]) throws UnknownHostException {
+    public void transmitData(byte data[]) throws IOException {
         int numPackets = (int)(Math.ceil(data.length * 1.0f/ (48 * 1024 - 8)*1.0f));
         int currentPacket = 0;
         int lastPacket = 0;
@@ -38,19 +38,23 @@ public class UDPTranseiver {
         DatagramPacket datagramPacketSent;
         DatagramPacket datagramPacketResponse;
         ByteArrayOutputStream byteArrayOutputStream;
+        DataOutputStream dataOutputStream;
+        ByteArrayInputStream byteArrayInputStream;
+        DataInputStream dataInputStream;
 
 
         while(lastPacket == 0)
         {
             byteArrayOutputStream = new ByteArrayOutputStream();
+            dataOutputStream = new DataOutputStream(byteArrayOutputStream);
             if(currentPacket == numPackets - 1)
             {
                 lastPacket = 1;
             }
 
             //Write the first two bytes of the header
-            byteArrayOutputStream.write(currentPacket);
-            byteArrayOutputStream.write(lastPacket);
+            dataOutputStream.writeInt(currentPacket);
+            dataOutputStream.writeInt(lastPacket);
 
             if(lastPacket == 0)
             {
@@ -61,8 +65,8 @@ public class UDPTranseiver {
                     toTrans[i] = data[currentPacket * (48*1024 - 12) + i];
                 }
                 //Write the ammount of bytes to be read in the packet
-                byteArrayOutputStream.write(48*1024 - 5);
-                bytesRemaining -= 48*1024 - 5;
+                dataOutputStream.writeInt(48*1024 - 12);
+                bytesRemaining -= 48*1024 - 12;
             }else
             {
                 toTrans = new byte[bytesRemaining];
@@ -71,12 +75,12 @@ public class UDPTranseiver {
                     toTrans[i] = data[currentPacket * (48*1024 - 12) + i];
                 }
                 //Write the ammount of bytes to be read in the packet
-                byteArrayOutputStream.write(bytesRemaining);
+                dataOutputStream.writeInt(bytesRemaining);
             }
 
             //Write the data
             try {
-                byteArrayOutputStream.write(toTrans);
+                dataOutputStream.write(toTrans);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -84,13 +88,14 @@ public class UDPTranseiver {
             datagramPacketSent = new DatagramPacket(tmp, tmp.length, InetAddress.getByName("localhost"), port);
 
             try {
-                socket.setSoTimeout(2000);
+                socket.setSoTimeout(10000);
 
             } catch (SocketException e) {
                 e.printStackTrace();
             }
 
             try {
+                System.out.println("Sending packet " + currentPacket);
                 socket.send(datagramPacketSent);
             } catch (IOException e) {
                 System.out.println("Timeout on send");
@@ -108,13 +113,13 @@ public class UDPTranseiver {
                 System.out.println("Timeout on receive");
                 e.printStackTrace();
             }
-            ByteBuffer byteBuffer = ByteBuffer.wrap(recv);
 
-            byteBuffer.asIntBuffer();
+            byteArrayInputStream = new ByteArrayInputStream(recv);
+            dataInputStream = new DataInputStream(byteArrayInputStream);
 
-            int lastAck = byteBuffer.getInt();
-            int successfulDataRead = byteBuffer.getInt();
-            int corruptPacket = byteBuffer.getInt();
+            int lastAck = dataInputStream.readInt();
+            int successfulDataRead = dataInputStream.readInt();
+            int corruptPacket = dataInputStream.readInt();
 
             if(lastAck == currentPacket && successfulDataRead == 1)
                 currentPacket++;
@@ -132,9 +137,8 @@ public class UDPTranseiver {
 
     }
 
-    public Packet receiveData()
-    {
-        Packet toRet;
+    public File receiveData(String filename) throws IOException {
+        File toRet = new File("./Music/" +filename);
 
         try {
             socket.setSoTimeout(10000);
@@ -145,12 +149,16 @@ public class UDPTranseiver {
         int lastPacket = 0;
         int fullDataRead = 0;
         byte[] buffer;
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ByteArrayOutputStream outputStream;
+        ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream outputStream = null;
+        ByteArrayInputStream byteArrayInputStream;
+        DataInputStream dataInputStream;
+        DataOutputStream dataOutputStream;
         while(lastPacket == 0)
         {
 
             outputStream = new ByteArrayOutputStream();
+            dataOutputStream = new DataOutputStream(outputStream);
             buffer = new byte[48*1024];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
@@ -159,14 +167,13 @@ public class UDPTranseiver {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            byteArrayInputStream = new ByteArrayInputStream(buffer);
+            dataInputStream = new DataInputStream(byteArrayInputStream);
+            int packetSent = dataInputStream.readInt();
+            lastPacket = dataInputStream.readInt();
+            int dataLength = dataInputStream.readInt();
 
-            ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
-            IntBuffer b = byteBuffer.asIntBuffer();
-            int packetSent = b.get();
-            lastPacket = b.get();
-            int dataLenght = b.get();
-
-            if(buffer.length - 12 == dataLenght)
+            if(buffer.length - 12 == dataLength)
             {
                 fullDataRead = 1;
             }
@@ -174,23 +181,29 @@ public class UDPTranseiver {
             //Ack the packet and confirm the read
             if(lastPacket == 0)
             {
-                outputStream.write(currentPacket);;
-                outputStream.write(fullDataRead);
-                outputStream.write(1);
+                dataOutputStream.writeInt(currentPacket);
+                dataOutputStream.writeInt(fullDataRead);
+                dataOutputStream.writeInt(0);
             }
             if(fullDataRead == 1 && currentPacket == packetSent)
             {
-                byteArrayOutputStream.write(buffer, 12, buffer.length - 12);
+                fileStream.write(buffer, 12, buffer.length - 12);
                 currentPacket++;
             }
 
             fullDataRead = 0;
+            byte[] sendBuffer = outputStream.toByteArray();
+            DatagramPacket responsePacket = new DatagramPacket(sendBuffer, sendBuffer.length, packet.getAddress(), packet.getPort());
+            socket.send(responsePacket);
 
         }
 
-        byte[] pack = byteArrayOutputStream.toByteArray();
+        byte[] pack = fileStream.toByteArray();
+        FileOutputStream stream = new FileOutputStream("./Music/" + filename);
+        stream.write(pack);
+        stream.close();
 
-        toRet = (Packet)Serializer.unserializeFromString(new String(pack));
+        System.out.println("File Transfer Complete : " + filename);
 
         return toRet;
     }
