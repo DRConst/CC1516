@@ -8,11 +8,17 @@ package Client;
 import Commons.*;
 import Server.Packet;
 import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
+import com.sun.xml.internal.ws.developer.Serialization;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Iterator;
+
+import static java.lang.Thread.sleep;
 
 /**
  *
@@ -174,7 +180,7 @@ public class Client {
         fileName = keyboard.readLine();
         packet.setType(PacketTypes.conReqPacket);
         ConReqData d = new ConReqData(fileName);
-        packet.setData(Serializer.convertToString(d));
+        packet.setData(Serializer.serializeToString(d));
         output.println(Serializer.serializeToString(packet));
         String resp = input.readLine();
         if(resp.equals("Error"))
@@ -237,6 +243,29 @@ public class Client {
                 }
 
                 System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + "with ping " + shortestPing);
+
+                UDPTranseiver udpTranseiver = new UDPTranseiver();
+                packet.setType(PacketTypes.transReqPacket);
+                TransReqData transReqData = new TransReqData(fileName, udpTranseiver.getPort(), udpTranseiver.getIp());
+                packet.setData(Serializer.serializeToString(transReqData));
+                Socket socket = new Socket(ip, port);
+                reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+
+                Thread thread = new Thread(() -> {
+                    Packet filePacket = udpTranseiver.receiveData();
+                    saveFile(filePacket);
+                });
+
+
+                writer.println(Serializer.serializeToString(packet));
+                writer.flush();
+                String res = reader.readLine();
+                Packet resPacket = (Packet) Serializer.unserializeFromString(res);
+                if(resPacket.getType() != PacketTypes.transResPacket)
+                    throw new UnexpectedPacketException("Expected transResPacket");
+                thread.start();
+
             }
             if(i == 0)
             {
@@ -320,6 +349,40 @@ public class Client {
             data.setTimestamp(new Date());
             resp.setData(Serializer.serializeToString(data));
         }
+        if(p.getType() == PacketTypes.transReqPacket)
+        {
+            TransReqData data = (TransReqData)Serializer.unserializeFromString(p.getData());
+
+            resp.setType(PacketTypes.transResPacket);
+            TransResData resData = new TransResData();
+            resp.setData(Serializer.serializeToString(resData));
+
+
+
+            UDPTranseiver udpTranseiver = new UDPTranseiver();
+            udpTranseiver.setIp(data.ip);
+            udpTranseiver.setPort(data.port);
+            Path path = Paths.get("./Music/" + data.file);
+            byte[] file = Files.readAllBytes(path);
+
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        udpTranseiver.transmitData(file);
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            t.start();
+
+        }
         writer.println(Serializer.serializeToString(resp));
         writer.flush();
     }
@@ -363,6 +426,11 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void saveFile(Packet filePacket)
+    {
+
     }
     public static void main(String[] args) throws IOException {
         new Client();

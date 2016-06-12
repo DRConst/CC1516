@@ -10,8 +10,8 @@ public class PacketTypes {
     public static short conResPacket = 3;
     public static short proReqPacket = 4;
     public static short proResPacket = 5;
-    public static short requestPacket = 6;
-    public static short filePacket = 7;
+    public static short transReqPacket = 6;
+    public static short transResPacket = 7;
     public static short rsaProPacket = 8;
     public static short rsaResPacket = 9;
 }
