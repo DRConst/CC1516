@@ -111,6 +111,7 @@ public class ClientHandler implements Runnable{
             ConReqData data = (ConReqData)Serializer.unserializeFromString(p.data);
             Packet packet = new Packet(PacketTypes.conReqPacket, 1, false, null, null, null);
             ConReqData reqData = new ConReqData(data.getSongName());
+            reqData.setPropagate(false);
             packet.setData(Serializer.convertToString(reqData));
 
             ArrayList<InetAddress> hosts = new ArrayList<>();
@@ -348,7 +349,7 @@ public class ClientHandler implements Runnable{
                 }
                 while (handle() != 0) ;
             } catch (InterruptedException ex) {
-                Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
             }
             this.in.close();
             this.out.close();

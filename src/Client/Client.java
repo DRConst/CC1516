@@ -230,10 +230,12 @@ public class Client {
 
             BufferedReader reader;
             PrintWriter writer;
+            InetAddress ip = null;
+            int port = -1;
             for(i = 0; i < resData.getIP().size(); i++)
             {
-                InetAddress ip = (InetAddress) ipIterator.next();
-                int port = (int) portIterator.next();
+                ip = (InetAddress) ipIterator.next();
+                port = (int) portIterator.next();
                 System.out.println("Found file in host " + ip + " on port " + port);
                 Packet pingPacket = new Packet(PacketTypes.proReqPacket, 0, false, null, null, null);
                 ProReqData data = new ProReqData();
@@ -267,7 +269,12 @@ public class Client {
                     System.out.println("Host " + ip + " timed out;");
                 }
 
-                System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + "with ping " + shortestPing);
+
+            }
+
+            if(ip != null && port != -1)
+            {
+                System.out.println("Fastest host is " + fastestHost + " on " + fastestPort + " with ping " + shortestPing);
 
                 UDPTranseiver udpTranseiver = new UDPTranseiver();
                 packet.setType(PacketTypes.transReqPacket);
@@ -295,9 +302,7 @@ public class Client {
                 if(resPacket.getType() != PacketTypes.transResPacket)
                     throw new UnexpectedPacketException("Expected transResPacket");
                 thread.start();
-
-            }
-            if(i == 0)
+            }else
             {
                 System.out.println("No hosts found");
             }
