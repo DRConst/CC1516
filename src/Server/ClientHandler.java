@@ -77,12 +77,16 @@ public class ClientHandler implements Runnable{
 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
+                out.println("Error");
             } catch (UserRegisteredException e) {
                 e.printStackTrace();
+                out.println("Error");
             } catch (LoginFailedException e) {
                 e.printStackTrace();
+                out.println("Error");
             } catch (UserNotFoundException e) {
                 e.printStackTrace();
+                out.println("Error");
             }
 
         }else if(p.getType() == PacketTypes.loginPacket)
@@ -194,12 +198,12 @@ public class ClientHandler implements Runnable{
                         e.printStackTrace();
                     }
             }
-            else if((ports.size() == 0 || hosts.size()==0 ) && reqData.isPropagate())
+            else if((ports.size() == 0 || hosts.size()==0 ) && data.isPropagate())
             {
                 Socket s = new Socket("localhost", 20100);
 
                 Packet serverRequestPacket = new Packet(PacketTypes.conReqPacket, 0, false, null, null, null);
-                ConReqData requestData = new ConReqData(reqData.getSongName(), true);
+                ConReqData requestData = new ConReqData(data.getSongName(), true);
                 requestData.setPropagate(true);
                 serverRequestPacket.setData(Serializer.convertToString(requestData));
 
@@ -277,6 +281,8 @@ public class ClientHandler implements Runnable{
                     throw new ClientTimedOutException();
                 }
             } catch (IOException e) {
+                activeUser.setLogged(false);
+                login.setLoggedIn(activeUser.getUsername(), false, 0);
                 throw new ClientTimedOutException();
             }
 
